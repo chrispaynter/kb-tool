@@ -1,3 +1,1 @@
-# TyporaKnowledgeBase
-
-A description of this package.
+Reference - https://rderik.com/blog/understanding-a-few-concepts-of-macos-applications-by-building-an-agent-based-menu-bar-app/
