@@ -1,24 +1,8 @@
 import Cocoa
 
-class MenuFileItem: CustomStringConvertible {
-    internal init(isDirectory: Bool, url: URL) {
-        self.isDirectory = isDirectory
-        self.url = url
-    }
-    
-    var isDirectory: Bool
-    var url: URL;
-    
-    var children: [MenuFileItem] = [];
-    var parent: MenuFileItem?;
-    
-    
-    var description: String {
-        return url.path;
-    }
-}
-
 class AppDelegate: NSObject, NSApplicationDelegate {
+    
+    let main = NSMenu(title: "Knowledge Base Menu")
     
     var statusBarItem: NSStatusItem!
     
@@ -30,10 +14,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                                     action: nil,
                                     keyEquivalent: "");
     
+   
+    
     let mainDropdown = NSMenuItem(title: "Items",
                                     action: nil,
                                     keyEquivalent: "");
     let subMenu = NSMenu(title: "Structure");
+    
     
     var timer:Timer?;
     
@@ -51,67 +38,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
     
-    func buildKBFolders() {
-        
-        let kbRootPath = "/Users/chris/kb";
-        let url = URL(fileURLWithPath: kbRootPath)
-        
-        let root = MenuFileItem(isDirectory: true, url: url);
-        
-        var currentDirectory: MenuFileItem = root;
-        
-        if let enumerator = FileManager.default.enumerator(at: url, includingPropertiesForKeys: [.isRegularFileKey, .isDirectoryKey], options: [.skipsHiddenFiles, .skipsPackageDescendants]) {
-            
-            for case let fileURL as URL in enumerator {
-                print("CURRENT \(currentDirectory.url.path)")
-                do {
-                    if(fileURL.scheme != nil && fileURL.scheme == "file") {
-                        
-                        let isInCurrentDir = currentDirectory.url == fileURL.deletingLastPathComponent();
-                        if(!isInCurrentDir) {
-                            currentDirectory = currentDirectory.parent!;
-                            print("BACK TO DIR \(currentDirectory.url.path)")
-                        }
-                      
-                        if(fileURL.hasDirectoryPath) {
-                            let newDir = MenuFileItem(isDirectory: true, url: fileURL);
-                            newDir.parent = currentDirectory;
-                            currentDirectory.children.append(newDir);
-                            currentDirectory = newDir;
-                            print("ADDING DIR \(newDir.url.path)")
-                        } else {
-                            let fileItem = MenuFileItem(isDirectory: false, url: fileURL);
-                            print("ADDING FILE \(fileItem.url.path)")
-                            currentDirectory.children.append(fileItem);
-                        }
-                    }
-                    print()
-                } catch { print(error, fileURL) }
-            }
-            
-            root.children.forEach() { child in
-                print(child.url);
-            }
-        }
+
+    func buildFileMenu() {
+        let structure = buildFolderStructure(kbRootPath: "/Users/chris/kb");
+        recursiveFileItemBuild(menu: main,
+                               rootItem: structure,
+                               action: #selector(selectItem(_:)))
     }
     
-    func applicationDidFinishLaunching(_ aNotification: Notification) {
-        let statusBar = NSStatusBar.system
-        statusBarItem = statusBar.statusItem(
-            withLength: NSStatusItem.variableLength)
-        
-        
-        statusBarItem.button?.title = "🧠"
-        syncedMenuItem.isHidden = true;
-        
-        let main = NSMenu(title: "Knowledge Base Menu")
-        statusBarItem.menu = main
-        
+    func layoutMenu() {
+        main.removeAllItems()
         main.addItem(syncedMenuItem)
         main.addItem(commitMenuItem)
         main.addItem(NSMenuItem.separator())
-        main.addItem(mainDropdown);
-        main.setSubmenu(subMenu, for: mainDropdown)
+//        main.addItem(mainDropdown);
+        buildFileMenu()
         main.addItem(NSMenuItem.separator())
         main.addItem(
             withTitle: "Settings",
@@ -121,21 +62,24 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             withTitle: "Quit",
             action: #selector(AppDelegate.quit),
             keyEquivalent: "")
+    }
+    
+    
+    func applicationDidFinishLaunching(_ aNotification: Notification) {
+        let statusBar = NSStatusBar.system
+        statusBarItem = statusBar.statusItem(
+            withLength: NSStatusItem.variableLength)
+        
+        
+        statusBarItem.button?.title = "🧠"
+        syncedMenuItem.isHidden = true;
+        statusBarItem.menu = main
+        
+       layoutMenu()
         
         self.checkForChanges()
         
        startTimer()
-    }
-    
-    
-    func shell(_ args: String...) -> Int32 {
-        let task = Process()
-        task.launchPath = "/usr/bin/env"
-        task.arguments = args
-        task.currentDirectoryPath = "~/kb"
-        task.launch()
-        task.waitUntilExit()
-        return task.terminationStatus
     }
     
     @objc func checkForChanges() {
@@ -164,6 +108,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         commitMenuItem.isHidden = true;
         syncedMenuItem.isHidden = false;
         startTimer()
+    }
+    
+    @objc func selectItem(_ sender: CustomNSMenuItem) {
+        print("\(sender.item?.url.path)");
     }
     
     @objc func quit() {
