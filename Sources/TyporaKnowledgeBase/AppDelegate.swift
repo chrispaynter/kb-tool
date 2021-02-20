@@ -112,6 +112,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     @objc func selectItem(_ sender: CustomNSMenuItem) {
         print("\(sender.item?.url.path)");
+        NSWorkspace.shared.openFile(sender.item!.url.path, withApplication: "Typora")
     }
     
     @objc func quit() {

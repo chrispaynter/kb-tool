@@ -62,9 +62,20 @@ func buildFolderStructure(kbRootPath:String)->FolderStructureItem {
     return root;
 }
 
+func sortItems(left:FolderStructureItem, right:FolderStructureItem)->Bool {
+    let priority = "                  ";
+    let leftName = left.isDirectory ? "\(priority)\(left.url.lastPathComponent)" : left.url.lastPathComponent
+    let rightName = right.isDirectory ? "\(priority)\(right.url.lastPathComponent)" : right.url.lastPathComponent
+    return leftName.lowercased() < rightName.lowercased();
+}
+
 func recursiveFileItemBuild(menu:NSMenu, rootItem: FolderStructureItem, action:Selector) {
     
-    rootItem.children.forEach() { item in
+    let sorted = rootItem.children.sorted { (left, right) -> Bool in
+        return sortItems(left: left, right: right)
+    }
+    
+    sorted.forEach() { item in
         let menuItem = CustomNSMenuItem(title: "", action: action, keyEquivalent: "")
         menuItem.item = item;
         menu.addItem(menuItem)
