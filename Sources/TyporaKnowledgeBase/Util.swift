@@ -40,7 +40,7 @@ func buildFolderStructure(kbRootPath:String)->FolderStructureItem {
                     if(!isInCurrentDir) {
                         currentDirectory = currentDirectory.parent!;
                     }
-                  
+                    
                     if(fileURL.hasDirectoryPath) {
                         let newDir = FolderStructureItem(isDirectory: true, url: fileURL);
                         newDir.parent = currentDirectory;
@@ -91,13 +91,41 @@ func recursiveFileItemBuild(menu:NSMenu, rootItem: FolderStructureItem, action:S
     }
 }
 
+class ShellExecutionResult {
+    init(code:Int32, output:String) {
+        self.code = code;
+        self.outputString = output;
+    }
+    var code:Int32;
+    var outputString:String;
+}
 
-func shell(_ args: String...) -> Int32 {
+func shell(_ args: String...) -> ShellExecutionResult {
     let task = Process()
     task.launchPath = "/usr/bin/env"
     task.arguments = args
     task.currentDirectoryPath = "~/kb"
+    let pipe = Pipe()
+    task.standardOutput = pipe
     task.launch()
+    var outstr = ""
+    let data = pipe.fileHandleForReading.readDataToEndOfFile()
+    if let output = String(data: data, encoding: .utf8) {
+        outstr = output as String
+    }
     task.waitUntilExit()
-    return task.terminationStatus
+    return ShellExecutionResult(code: task.terminationStatus, output: outstr)
+}
+
+func filterFoldersByName(root:FolderStructureItem, name:String) {
+    
+    root.children = root.children.filter({
+        if($0.isDirectory) {
+            return $0.url.lastPathComponent.lowercased() != name.lowercased()
+        } else {
+            return true;
+        }
+        
+    })
+    root.children.forEach() { child in filterFoldersByName(root: child, name: name)}
 }

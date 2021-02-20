@@ -10,16 +10,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                                     action: #selector(AppDelegate.commitChanges),
                                     keyEquivalent: "");
     
-    let syncedMenuItem = NSMenuItem(title: "Everything up to date.",
+    let syncedMenuItem = NSMenuItem(title: "👍🏻 Everything has been synced",
                                     action: nil,
                                     keyEquivalent: "");
     
-   
+    
     
     let mainDropdown = NSMenuItem(title: "Items",
-                                    action: nil,
-                                    keyEquivalent: "");
+                                  action: nil,
+                                  keyEquivalent: "");
     let subMenu = NSMenu(title: "Structure");
+     
+    let rootPath = "/Users/chris/kb";
     
     
     var timer:Timer?;
@@ -38,9 +40,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
     
-
+    
     func buildFileMenu() {
-        let structure = buildFolderStructure(kbRootPath: "/Users/chris/kb");
+        let structure = buildFolderStructure(kbRootPath: rootPath);
+        filterFoldersByName(root: structure, name: "images")
         recursiveFileItemBuild(menu: main,
                                rootItem: structure,
                                action: #selector(selectItem(_:)))
@@ -50,10 +53,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         main.removeAllItems()
         main.addItem(syncedMenuItem)
         main.addItem(commitMenuItem)
+//        main.addItem(NSMenuItem.separator())
+//        main.addItem(NSMenuItem(title: "Recent Files", action: nil, keyEquivalent: ""))
         main.addItem(NSMenuItem.separator())
-//        main.addItem(mainDropdown);
+        main.addItem(NSMenuItem(title: "Knowledge Base", action: nil, keyEquivalent: ""))
         buildFileMenu()
         main.addItem(NSMenuItem.separator())
+        main.addItem(
+            withTitle: "Open in editor",
+            action: #selector(openInEditor),
+            keyEquivalent: "")
         main.addItem(
             withTitle: "Settings",
             action: #selector(AppDelegate.quit),
@@ -75,17 +84,23 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         syncedMenuItem.isHidden = true;
         statusBarItem.menu = main
         
-       layoutMenu()
+        layoutMenu()
         
         self.checkForChanges()
         
-       startTimer()
+        startTimer()
+    }
+    
+    @objc func openInEditor() {
+        openPath(path: rootPath)
     }
     
     @objc func checkForChanges() {
-        if(shell("git", "diff", "--quiet", "--exit-code") != 0 ||
-            shell("git", "diff", "--staged", "--quiet", "--exit-code") != 0) {
-            statusBarItem.button?.title = "🧠⚠️"
+        
+        let res = shell("git", "status", "--porcelain");
+        
+        if(res.code == 0 && res.outputString != "") {
+            statusBarItem.button?.title = "🧠✏️"
             commitMenuItem.isHidden = false;
             syncedMenuItem.isHidden = true;
             print("CHANGES");
@@ -111,8 +126,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     @objc func selectItem(_ sender: CustomNSMenuItem) {
-        print("\(sender.item?.url.path)");
-        NSWorkspace.shared.openFile(sender.item!.url.path, withApplication: "Typora")
+        openPath(path: sender.item!.url.path)
+    }
+    
+    func openPath(path:String) {
+        NSWorkspace.shared.openFile(path, withApplication: "Typora")
     }
     
     @objc func quit() {
